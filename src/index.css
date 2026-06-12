@@ -1,0 +1,87 @@
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: #ECEAF2;
+  font-family: 'Hanken Grotesk', sans-serif;
+  color: #211F2A;
+}
+
+input::placeholder {
+  color: #B6B2C2;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Stage: centers the phone shell on desktop, full-bleed on mobile */
+.stage {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #ECEAF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 44px 32px 64px;
+  box-sizing: border-box;
+}
+
+.shell {
+  width: 400px;
+  height: 824px;
+  background: #F7F6FB;
+  border-radius: 28px;
+  box-shadow: 0 24px 60px rgba(33,31,42,0.14), 0 2px 8px rgba(33,31,42,0.06);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .stage { padding: 0; align-items: stretch; }
+  .shell {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Hover states (mirroring the prototype's style-hover attributes) */
+.hov-border:hover { border-color: #C9C3E2 !important; }
+.hov-dark:hover { background: #383447 !important; }
+.hov-accent:hover { border-color: #6053CE !important; color: #6053CE !important; }
+.hov-red:hover { color: #B6455A !important; }
+.hov-row:hover { background: #FAF9FD !important; }
+
+/* Focus states (mirroring style-focus) */
+.foc-accent:focus { border-color: #6053CE !important; outline: none; }
+
+.tab-content {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 0 20px 120px;
+  box-sizing: border-box;
+}
+
+/* Respect notch / home-indicator areas when installed */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .tabbar { padding-bottom: calc(22px + env(safe-area-inset-bottom) * 0.6) !important; }
+}

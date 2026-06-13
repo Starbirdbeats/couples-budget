@@ -1,51 +1,41 @@
 # Provisioning — Supabase auth + database
 
-One-time cloud setup for real Google sign-in and the Postgres database. ~10 minutes.
-Everything is done as **marcellohaupt@gmail.com**.
+Real Google sign-in and the Postgres database, provisioned under **marcellohaupt@gmail.com**.
+This records what's set up and how to maintain it.
 
-## 1. Supabase project
+## What's live
 
-1. Sign in at https://supabase.com/dashboard (GitHub or email).
-2. **New project** → name `couples-budget`, pick a region near you (e.g. `Frankfurt (eu-central-1)`),
-   let it generate a database password (you don't need it for the app — RLS + the anon key are what the client uses).
-3. Wait ~2 min for it to provision.
+- **Supabase project:** `couples-budget` (ref `rodheuixrkpemnlyxses`), org **Starbird**, region Europe.
+  - URL: `https://rodheuixrkpemnlyxses.supabase.co`
+  - Schema in [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) — applied. RLS on every table.
+  - Auth: Site URL + redirect allow-list set to the Pages URL and `localhost:5173`.
+- **Google OAuth client:** created in Google Cloud project **OpenClaw Calendar** (`openclaw-calendar-487220`),
+  client name "Couples Budget", type Web application.
+  - Authorized JS origins: `https://starbirdbeats.github.io`, `http://localhost:5173`
+  - Redirect URI: `https://rodheuixrkpemnlyxses.supabase.co/auth/v1/callback`
+  - Enabled as the Google provider in Supabase.
+- **App credentials:** `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (the publishable key — safe in the
+  client bundle; RLS is the boundary). In `.env` locally and as GitHub Actions **repository variables**
+  for the Pages build.
 
-## 2. Apply the schema
+## Cleanup / maintenance to do
 
-1. In the project: **SQL Editor** → **New query**.
-2. Paste the entire contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) and **Run**.
-3. Confirm under **Table editor** that `households`, `household_members`, `categories`,
-   `transactions`, `budgets`, `funds`, `contributions` all exist with RLS enabled (shield icon).
+1. **Revoke the provisioning token.** A Supabase personal access token named `couples-budget-provision`
+   was created to apply the schema via the Management API. Delete it at
+   https://supabase.com/dashboard/account/tokens once you're happy everything works.
+2. **Consent-screen branding (cosmetic).** The OAuth client lives in the *OpenClaw Calendar* Google Cloud
+   project, so Google's sign-in screen shows "OpenClaw Calendar". For v1 only you sign in, so this is
+   harmless. To fix: create a dedicated Google Cloud project for Couples Budget, configure its OAuth
+   consent screen, make a new Web client there, and swap the client ID/secret into the Supabase Google
+   provider. (A first attempt at a dedicated project stalled on IAM propagation — retrying later should work.)
+3. **Test users.** OpenClaw's consent screen is in *Testing* mode; `marcellohaupt@gmail.com` is already a
+   test user. When the partner starts logging in (Scope B), add their email as a test user too, or publish
+   the dedicated app.
 
-## 3. Google OAuth client (Google Cloud Console)
-
-1. In Supabase: **Authentication → Sign In / Providers → Google**. Copy the **Callback URL**
-   (looks like `https://<ref>.supabase.co/auth/v1/callback`). Leave this tab open.
-2. Go to https://console.cloud.google.com → create/select a project (e.g. `couples-budget`).
-3. **APIs & Services → OAuth consent screen** → External → fill app name + your email → save.
-4. **APIs & Services → Credentials → Create credentials → OAuth client ID** → type **Web application**.
-   - **Authorized JavaScript origins:** `https://starbirdbeats.github.io` and `http://localhost:5173`
-   - **Authorized redirect URIs:** paste the Supabase Callback URL from step 1.
-   - Create → copy the **Client ID** and **Client secret**.
-5. Back in Supabase Google provider: paste **Client ID** + **Client secret**, toggle **Enable**, **Save**.
-
-## 4. Allowed redirect URLs (Supabase)
-
-**Authentication → URL Configuration:**
-- **Site URL:** `https://starbirdbeats.github.io/couples-budget/`
-- **Redirect URLs:** add `https://starbirdbeats.github.io/couples-budget/**` and `http://localhost:5173/**`
-
-## 5. App credentials
-
-**Project Settings → API**, copy:
-- **Project URL** → `VITE_SUPABASE_URL`
-- **anon / public key** → `VITE_SUPABASE_ANON_KEY`
-
-Put them in `.env` (local) and as the build env for CI. Both are publishable — the anon key
-is safe in a static bundle; row-level security is the real boundary.
+## Local setup
 
 ```bash
-cp .env.example .env   # then fill in the two values
+cp .env.example .env   # fill in URL + anon key (values above)
+npm install
+npm run dev
 ```
-
-Once `.env` is filled, hand the two values over and the client wiring + deploy is finished from here.

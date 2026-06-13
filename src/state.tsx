@@ -1,40 +1,49 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import type {
-  AppData, ColorKey, Contrib, EntryForm, Member, OnboardingDraft, Screen, Tab, Txn, User,
+  AppData, ColorKey, Contrib, EntryForm, OnboardingDraft, Screen, Tab, Txn, User,
 } from './types'
 import { COLORS } from './theme'
+import { seed, todayISO, uid } from './store'
+import { supabase } from './lib/supabase'
+import type { DbMember } from './lib/db'
 import {
-  clearProfile, loadData, loadProfile, saveData, saveProfile, seed, todayISO, uid,
-} from './store'
+  createHousehold, deleteBudget, deleteTransaction, insertCategory, insertContribution,
+  insertTransaction, loadHousehold, upsertBudget,
+} from './lib/db'
 
-interface AppState {
+type Mode = 'cloud' | 'demo'
+
+interface Ctx {
+  // session / routing
+  initializing: boolean
+  mode: Mode
   screen: Screen
-  oauthOpen: boolean
   menuOpen: boolean
-  obStep: number
-  ob: OnboardingDraft
+  setMenuOpen: (v: boolean) => void
+  // identity
   user: User | null
-  members: Member[]
+  members: DbMember[]
   currency: string
+  // data
+  data: AppData
   tab: Tab
   filter: string
   toast: string
-  data: AppData
   form: EntryForm
   budgetEdits: Record<string, string>
   newCat: string
   contrib: { fundId: string; amount: string; member: string }
-}
-
-interface AppActions {
-  setOauthOpen: (v: boolean) => void
-  setMenuOpen: (v: boolean) => void
+  // onboarding
+  ob: OnboardingDraft
+  obStep: number
   setOb: (patch: Partial<OnboardingDraft>) => void
-  setObStep: (n: number) => void
+  obNext: () => void
+  obBack: () => void
+  // actions
   setScreen: (s: Screen) => void
-  setUser: (u: User | null) => void
   setTab: (t: Tab) => void
   setFilter: (f: string) => void
   setForm: (patch: Partial<EntryForm>) => void
@@ -48,65 +57,55 @@ interface AppActions {
   deleteTxn: (id: string) => void
   flash: (msg: string) => void
   startGoogle: () => void
-  pickOauthAccount: (user: User) => void
   continueAsGuest: () => void
-  obNext: () => void
-  obBack: () => void
   signOut: () => void
+  // helpers
   fmt: (n: number, dec?: number) => string
   num: (n: number, dec?: number) => string
   person: (member: string) => { fg: string; bg: string }
   scrollRef: React.RefObject<HTMLDivElement | null>
 }
 
-const Ctx = createContext<(AppState & AppActions) | null>(null)
+const AppCtx = createContext<Ctx | null>(null)
 
 const EMPTY_DATA: AppData = { txns: [], cats: [], budgets: {}, funds: [], contribs: [] }
-
 const DEFAULT_OB: OnboardingDraft = {
   yourName: '', yourColor: 'indigo', partnerName: '', partnerColor: 'rose', currency: 'AED', suggested: true,
 }
 
-// Hydrate once at boot: a stored profile means a returning visit — skip straight to the app.
-const boot = (() => {
-  const profile = loadProfile()
-  if (!profile) return null
-  return {
-    profile,
-    data: loadData() ?? seed(profile.members[0].name, profile.members[1].name),
-  }
-})()
+const demoMembers = (): DbMember[] => [
+  { id: 'demo-0', name: 'Star', color: 'indigo', userId: null, role: 'owner' },
+  { id: 'demo-1', name: 'Niki', color: 'rose', userId: null, role: 'member' },
+]
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [screen, setScreen] = useState<Screen>(boot ? 'app' : 'auth')
-  const [oauthOpen, setOauthOpen] = useState(false)
+  const [initializing, setInitializing] = useState(true)
+  const [mode, setMode] = useState<Mode>('cloud')
+  const [screen, setScreen] = useState<Screen>('auth')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [obStep, setObStep] = useState(0)
-  const [ob, setObState] = useState<OnboardingDraft>(DEFAULT_OB)
-  const [user, setUser] = useState<User | null>(boot ? boot.profile.user : null)
-  const [members, setMembers] = useState<Member[]>(
-    boot ? boot.profile.members : [
-      { name: 'Star', color: 'indigo' },
-      { name: 'Niki', color: 'rose' },
-    ],
-  )
-  const [currency, setCurrency] = useState(boot ? boot.profile.currency || 'AED' : 'AED')
+
+  const [user, setUser] = useState<User | null>(null)
+  const [members, setMembers] = useState<DbMember[]>(demoMembers())
+  const [currency, setCurrency] = useState('AED')
+  const [householdId, setHouseholdId] = useState<string | null>(null)
+
+  const [data, setData] = useState<AppData>(EMPTY_DATA)
   const [tab, setTabState] = useState<Tab>('home')
   const [filter, setFilter] = useState('all')
   const [toast, setToast] = useState('')
-  const [data, setData] = useState<AppData>(boot ? boot.data : EMPTY_DATA)
   const [form, setFormState] = useState<EntryForm>({
-    type: 'expense', amount: '', date: todayISO(), catId: '',
-    member: boot ? boot.profile.members[0].name : 'Star', scope: 'shared', notes: '',
+    type: 'expense', amount: '', date: todayISO(), catId: '', member: 'Star', scope: 'shared', notes: '',
   })
   const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({})
   const [newCat, setNewCat] = useState('')
-  const [contrib, setContribState] = useState({
-    fundId: 'f1', amount: '', member: boot ? boot.profile.members[0].name : 'Star',
-  })
+  const [contrib, setContribState] = useState({ fundId: '', amount: '', member: 'Star' })
+
+  const [ob, setObState] = useState<OnboardingDraft>(DEFAULT_OB)
+  const [obStep, setObStep] = useState(0)
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const hydrating = useRef(false)
 
   const flash = useCallback((msg: string) => {
     setToast(msg)
@@ -114,13 +113,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastTimer.current = setTimeout(() => setToast(''), 2200)
   }, [])
 
-  const persist = useCallback((patch: Partial<AppData>) => {
-    setData((prev) => {
-      const next = { ...prev, ...patch }
-      saveData(next)
-      return next
-    })
+  const applyBundle = useCallback((b: NonNullable<Awaited<ReturnType<typeof loadHousehold>>>) => {
+    setHouseholdId(b.householdId)
+    setMembers(b.members)
+    setCurrency(b.currency)
+    setData(b.data)
+    setFormState((f) => ({ ...f, member: b.members[0].name, date: todayISO() }))
+    setContribState((c) => ({
+      ...c,
+      member: b.members[0].name,
+      fundId: c.fundId || (b.data.funds[0]?.id ?? ''),
+    }))
   }, [])
+
+  // Hydrate from a Supabase session: route to the app (existing household) or onboarding (new user).
+  const hydrate = useCallback(async (session: Session) => {
+    if (hydrating.current) return
+    hydrating.current = true
+    try {
+      const meta = session.user.user_metadata ?? {}
+      const u: User = { name: meta.full_name ?? meta.name ?? '', email: session.user.email ?? '' }
+      setMode('cloud')
+      setUser(u)
+      const bundle = await loadHousehold(session.user.id)
+      if (bundle) {
+        applyBundle(bundle)
+        setScreen('app')
+      } else {
+        setObState((prev) => ({ ...prev, yourName: (meta.given_name ?? meta.name ?? '').split(' ')[0] ?? '' }))
+        setObStep(0)
+        setScreen('onboarding')
+      }
+    } catch {
+      flash('Could not load your data')
+    } finally {
+      hydrating.current = false
+      setInitializing(false)
+    }
+  }, [applyBundle, flash])
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
+        void hydrate(session)
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        setInitializing(false)
+      } else if (event === 'SIGNED_OUT') {
+        setMode('cloud')
+        setUser(null)
+        setHouseholdId(null)
+        setMembers(demoMembers())
+        setData(EMPTY_DATA)
+        setScreen('auth')
+        setMenuOpen(false)
+        setObStep(0)
+        setTabState('home')
+      }
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [hydrate])
 
   const fmt = useCallback(
     (n: number, dec = 2) =>
@@ -139,37 +190,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [members],
   )
+  const memberId = useCallback(
+    (name: string) => members.find((m) => m.name === name)?.id ?? null,
+    [members],
+  )
 
   const setTab = useCallback((t: Tab) => {
     setTabState(t)
     if (scrollRef.current) scrollRef.current.scrollTop = 0
   }, [])
 
-  const finishSetup = useCallback(
-    (newMembers: Member[], cur: string, newUser: User | null, opts: { reuseData?: boolean; suggested?: boolean } = {}) => {
-      let stored: AppData | null = null
-      if (opts.reuseData) stored = loadData()
-      const names = newMembers.map((m) => m.name)
-      const ok = stored && stored.txns.length > 0 && stored.txns.every((t) => names.indexOf(t.member) >= 0)
-      let next = ok && stored ? stored : seed(names[0], names[1])
-      if (opts.suggested === false) next = { ...next, budgets: {} }
-      saveProfile({ user: newUser, members: newMembers, currency: cur })
-      saveData(next)
-      setScreen('app')
-      setUser(newUser)
-      setMembers(newMembers)
-      setCurrency(cur)
-      setData(next)
-      setFormState((f) => ({ ...f, member: names[0], date: todayISO() }))
-      setContribState((c) => ({ ...c, member: names[0] }))
-      setTabState('home')
-      setMenuOpen(false)
-      setOauthOpen(false)
-      flash("You're all set, " + names[0])
-    },
-    [flash],
-  )
+  // ---- auth ----
+  const startGoogle = useCallback(() => {
+    const redirectTo = window.location.origin + import.meta.env.BASE_URL
+    void supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
+  }, [])
 
+  const continueAsGuest = useCallback(() => {
+    const m = demoMembers()
+    const d = seed('Star', 'Niki')
+    setMode('demo')
+    setUser(null)
+    setHouseholdId(null)
+    setMembers(m)
+    setCurrency('AED')
+    setData(d)
+    setFormState((f) => ({ ...f, member: 'Star', date: todayISO() }))
+    setContribState((c) => ({ ...c, member: 'Star', fundId: d.funds[0]?.id ?? '' }))
+    setTabState('home')
+    setScreen('app')
+    flash('Exploring the demo')
+  }, [flash])
+
+  const signOut = useCallback(() => {
+    if (mode === 'demo') {
+      setMode('cloud')
+      setData(EMPTY_DATA)
+      setMembers(demoMembers())
+      setScreen('auth')
+      setMenuOpen(false)
+      return
+    }
+    void supabase.auth.signOut()
+  }, [mode])
+
+  // ---- onboarding (cloud) ----
   const obNext = useCallback(() => {
     if (obStep === 0 && !ob.yourName.trim()) return flash('Enter your name')
     if (obStep === 1) {
@@ -180,138 +245,151 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (obStep < 2) return setObStep(obStep + 1)
     let pColor = ob.partnerColor
     if (pColor === ob.yourColor) pColor = ob.yourColor === 'rose' ? 'indigo' : 'rose'
-    const newMembers: Member[] = [
-      { name: ob.yourName.trim(), color: ob.yourColor },
-      { name: ob.partnerName.trim(), color: pColor },
-    ]
-    finishSetup(newMembers, ob.currency, user, { reuseData: true, suggested: ob.suggested })
-  }, [ob, obStep, user, finishSetup, flash])
+    void (async () => {
+      try {
+        await createHousehold({
+          currency: ob.currency,
+          yourName: ob.yourName.trim(),
+          yourColor: ob.yourColor,
+          partnerName: ob.partnerName.trim(),
+          partnerColor: pColor,
+          suggested: ob.suggested,
+        })
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return flash('Session expired — sign in again')
+        const bundle = await loadHousehold(session.user.id)
+        if (bundle) applyBundle(bundle)
+        setTabState('home')
+        setScreen('app')
+        flash("You're all set, " + ob.yourName.trim())
+      } catch {
+        flash('Could not finish setup')
+      }
+    })()
+  }, [ob, obStep, applyBundle, flash])
 
   const obBack = useCallback(() => {
-    if (obStep === 0) setScreen('auth')
+    if (obStep === 0) signOut()
     else setObStep(obStep - 1)
-  }, [obStep])
+  }, [obStep, signOut])
 
-  const signOut = useCallback(() => {
-    clearProfile()
-    setScreen('auth')
-    setMenuOpen(false)
-    setOauthOpen(false)
-    setObStep(0)
-    setUser(null)
-    setTabState('home')
-  }, [])
-
+  // ---- mutations ----
   const submitTxn = useCallback(() => {
     const amt = parseFloat(form.amount)
     if (!amt || amt <= 0) return flash('Enter a valid amount')
     const cats = data.cats.filter((c) => c.type === form.type)
     if (!form.catId || !cats.find((c) => c.id === form.catId)) return flash('Pick a category')
-    const txn: Txn = {
-      id: uid(),
-      type: form.type,
-      amount: amt,
-      date: new Date(form.date + 'T12:00:00').getTime(),
-      catId: form.catId,
-      member: form.member,
-      scope: form.scope,
-      notes: form.notes,
+    const dateMs = new Date(form.date + 'T12:00:00').getTime()
+
+    const append = (id: string) => {
+      const txn: Txn = {
+        id, type: form.type, amount: amt, date: dateMs, catId: form.catId,
+        member: form.member, scope: form.scope, notes: form.notes,
+      }
+      setData((prev) => ({ ...prev, txns: [txn, ...prev.txns] }))
+      setFormState((f) => ({ ...f, amount: '', notes: '', catId: '' }))
+      setTabState('home')
+      flash(form.type === 'income' ? 'Income logged' : 'Expense logged')
+      if (scrollRef.current) scrollRef.current.scrollTop = 0
     }
-    persist({ txns: [txn, ...data.txns] })
-    setFormState((f) => ({ ...f, amount: '', notes: '', catId: '' }))
-    setTabState('home')
-    flash(form.type === 'income' ? 'Income logged' : 'Expense logged')
-    if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }, [form, data, persist, flash])
 
-  const deleteTxn = useCallback(
-    (id: string) => {
-      persist({ txns: data.txns.filter((x) => x.id !== id) })
-      flash('Entry deleted')
-    },
-    [data.txns, persist, flash],
-  )
+    if (mode === 'demo') return append(uid())
+    if (!householdId) return
+    void insertTransaction({
+      householdId, type: form.type, amount: amt, dateMs,
+      categoryId: form.catId, memberId: memberId(form.member), scope: form.scope, notes: form.notes,
+    }).then(append).catch(() => flash('Could not save — check your connection'))
+  }, [form, data, mode, householdId, memberId, flash])
 
-  const commitBudgetEdit = useCallback(
-    (catId: string) => {
-      const raw = budgetEdits[catId]
-      if (raw === undefined) return
-      const val = parseFloat(raw)
-      const budgets = { ...data.budgets }
+  const deleteTxn = useCallback((id: string) => {
+    setData((prev) => ({ ...prev, txns: prev.txns.filter((x) => x.id !== id) }))
+    flash('Entry deleted')
+    if (mode === 'cloud') void deleteTransaction(id).catch(() => flash('Delete failed — refresh to resync'))
+  }, [mode, flash])
+
+  const commitBudgetEdit = useCallback((catId: string) => {
+    const raw = budgetEdits[catId]
+    if (raw === undefined) return
+    const val = parseFloat(raw)
+    setBudgetEdits((prev) => {
+      const next = { ...prev }
+      delete next[catId]
+      return next
+    })
+    setData((prev) => {
+      const budgets = { ...prev.budgets }
       if (!val || val <= 0) delete budgets[catId]
       else budgets[catId] = val
-      setBudgetEdits((prev) => {
-        const next = { ...prev }
-        delete next[catId]
-        return next
-      })
-      persist({ budgets })
-      flash('Budget updated')
-    },
-    [budgetEdits, data.budgets, persist, flash],
-  )
+      return { ...prev, budgets }
+    })
+    flash('Budget updated')
+    if (mode === 'cloud' && householdId) {
+      const op = !val || val <= 0 ? deleteBudget(householdId, catId) : upsertBudget(householdId, catId, val)
+      void op.catch(() => flash('Budget save failed — refresh to resync'))
+    }
+  }, [budgetEdits, mode, householdId, flash])
 
   const addCategory = useCallback(() => {
     const name = newCat.trim()
     if (!name) return
-    persist({ cats: [...data.cats, { id: uid(), name, type: 'expense' }] })
-    setNewCat('')
-    flash('Category added')
-  }, [newCat, data.cats, persist, flash])
+    const append = (id: string) => {
+      setData((prev) => ({ ...prev, cats: [...prev.cats, { id, name, type: 'expense' }] }))
+      setNewCat('')
+      flash('Category added')
+    }
+    if (mode === 'demo') return append(uid())
+    if (!householdId) return
+    void insertCategory(householdId, name).then(append).catch(() => flash('Could not add category'))
+  }, [newCat, mode, householdId, flash])
 
   const contribute = useCallback(() => {
     const amt = parseFloat(contrib.amount)
     if (!amt) return flash('Enter an amount')
-    const funds = data.funds.map((fd) => (fd.id === contrib.fundId ? { ...fd, balance: fd.balance + amt } : fd))
-    const entry: Contrib = { id: uid(), fundId: contrib.fundId, amount: amt, member: contrib.member, date: Date.now() }
-    persist({ funds, contribs: [entry, ...data.contribs] })
-    setContribState((c) => ({ ...c, amount: '' }))
-    flash(amt > 0 ? 'Contribution added' : 'Withdrawal recorded')
-  }, [contrib, data, persist, flash])
+    const dateMs = Date.now()
+    const append = (id: string) => {
+      const entry: Contrib = { id, fundId: contrib.fundId, amount: amt, member: contrib.member, date: dateMs }
+      setData((prev) => ({
+        ...prev,
+        funds: prev.funds.map((fd) => (fd.id === contrib.fundId ? { ...fd, balance: fd.balance + amt } : fd)),
+        contribs: [entry, ...prev.contribs],
+      }))
+      setContribState((c) => ({ ...c, amount: '' }))
+      flash(amt > 0 ? 'Contribution added' : 'Withdrawal recorded')
+    }
+    if (mode === 'demo') return append(uid())
+    if (!householdId) return
+    void insertContribution({
+      householdId, fundId: contrib.fundId, memberId: memberId(contrib.member), amount: amt, dateMs,
+    }).then(append).catch(() => flash('Could not save contribution'))
+  }, [contrib, mode, householdId, memberId, flash])
 
-  const value = useMemo<AppState & AppActions>(
-    () => ({
-      screen, oauthOpen, menuOpen, obStep, ob, user, members, currency, tab, filter, toast,
-      data, form, budgetEdits, newCat, contrib,
-      setOauthOpen, setMenuOpen,
-      setOb: (patch) => setObState((prev) => ({ ...prev, ...patch })),
-      setObStep, setScreen, setUser,
-      setTab, setFilter,
-      setForm: (patch) => setFormState((prev) => ({ ...prev, ...patch })),
-      setBudgetEdit: (catId, v) => setBudgetEdits((prev) => ({ ...prev, [catId]: v })),
-      commitBudgetEdit,
-      setNewCat, addCategory,
-      setContrib: (patch) => setContribState((prev) => ({ ...prev, ...patch })),
-      contribute, submitTxn, deleteTxn, flash,
-      startGoogle: () => setOauthOpen(true),
-      pickOauthAccount: (u) => {
-        setOauthOpen(false)
-        setScreen('onboarding')
-        setObStep(0)
-        setUser(u)
-        setObState((prev) => ({ ...prev, yourName: u.name.split(' ')[0] ?? '' }))
-      },
-      continueAsGuest: () =>
-        finishSetup(
-          [{ name: 'Star', color: 'indigo' }, { name: 'Niki', color: 'rose' }],
-          'AED', null, { reuseData: true, suggested: true },
-        ),
-      obNext, obBack, signOut,
-      fmt, num, person, scrollRef,
-    }),
-    [
-      screen, oauthOpen, menuOpen, obStep, ob, user, members, currency, tab, filter, toast,
-      data, form, budgetEdits, newCat, contrib,
-      commitBudgetEdit, addCategory, contribute, submitTxn, deleteTxn, flash,
-      finishSetup, obNext, obBack, signOut, fmt, num, person, setTab,
-    ],
-  )
+  const value = useMemo<Ctx>(() => ({
+    initializing, mode, screen, menuOpen, setMenuOpen,
+    user, members, currency, data, tab, filter, toast, form, budgetEdits, newCat, contrib,
+    ob, obStep,
+    setOb: (patch) => setObState((prev) => ({ ...prev, ...patch })),
+    obNext, obBack,
+    setScreen, setTab, setFilter,
+    setForm: (patch) => setFormState((prev) => ({ ...prev, ...patch })),
+    setBudgetEdit: (catId, v) => setBudgetEdits((prev) => ({ ...prev, [catId]: v })),
+    commitBudgetEdit,
+    setNewCat, addCategory,
+    setContrib: (patch) => setContribState((prev) => ({ ...prev, ...patch })),
+    contribute, submitTxn, deleteTxn, flash,
+    startGoogle, continueAsGuest, signOut,
+    fmt, num, person, scrollRef,
+  }), [
+    initializing, mode, screen, menuOpen, user, members, currency, data, tab, filter, toast,
+    form, budgetEdits, newCat, contrib, ob, obStep,
+    obNext, obBack, setTab, commitBudgetEdit, addCategory, contribute, submitTxn, deleteTxn,
+    flash, startGoogle, continueAsGuest, signOut, fmt, num, person,
+  ])
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>
 }
 
 export function useApp() {
-  const ctx = useContext(Ctx)
+  const ctx = useContext(AppCtx)
   if (!ctx) throw new Error('useApp must be used inside AppProvider')
   return ctx
 }

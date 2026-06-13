@@ -4,7 +4,6 @@ import { Avatar } from './components/ui'
 import { TabBar } from './components/TabBar'
 import { Toast } from './components/Toast'
 import { AccountMenu } from './components/AccountMenu'
-import { OAuthSheet } from './components/OAuthSheet'
 import { Auth } from './screens/Auth'
 import { Onboarding } from './screens/Onboarding'
 import { Dashboard } from './screens/Dashboard'
@@ -66,15 +65,31 @@ function MainApp() {
   )
 }
 
+function Splash() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 22, background: '#6053CE', mixBlendMode: 'multiply' }} />
+        <div style={{ width: 44, height: 44, borderRadius: 22, background: '#C0457E', marginLeft: -14, mixBlendMode: 'multiply' }} />
+      </div>
+    </div>
+  )
+}
+
 function Shell() {
-  const { screen } = useApp()
+  const { initializing, screen } = useApp()
   return (
     <div className="stage">
       <div className="shell">
-        {screen === 'auth' && <Auth />}
-        {screen === 'onboarding' && <Onboarding />}
-        {screen === 'app' && <MainApp />}
-        <OAuthSheet />
+        {initializing ? (
+          <Splash />
+        ) : (
+          <>
+            {screen === 'auth' && <Auth />}
+            {screen === 'onboarding' && <Onboarding />}
+            {screen === 'app' && <MainApp />}
+          </>
+        )}
         <Toast />
       </div>
     </div>

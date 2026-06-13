@@ -1,7 +1,4 @@
-import type { AppData, Profile } from './types'
-
-export const DATA_KEY = 'couples-budget-redesign-v1'
-export const PROFILE_KEY = 'couples-budget-profile-v1'
+import type { AppData } from './types'
 
 export function uid(): string {
   return Math.random().toString(36).slice(2, 10)
@@ -19,54 +16,7 @@ function daysAgo(n: number, hour = 12): number {
   return d.getTime()
 }
 
-export function loadData(): AppData | null {
-  try {
-    const raw = localStorage.getItem(DATA_KEY)
-    if (!raw) return null
-    const data = JSON.parse(raw)
-    if (!data || !Array.isArray(data.txns)) return null
-    return data as AppData
-  } catch {
-    return null
-  }
-}
-
-export function saveData(data: AppData) {
-  try {
-    localStorage.setItem(DATA_KEY, JSON.stringify(data))
-  } catch {
-    /* storage unavailable */
-  }
-}
-
-export function loadProfile(): Profile | null {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY)
-    if (!raw) return null
-    const p = JSON.parse(raw)
-    if (!p || !Array.isArray(p.members) || p.members.length !== 2) return null
-    return p as Profile
-  } catch {
-    return null
-  }
-}
-
-export function saveProfile(profile: Profile) {
-  try {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
-  } catch {
-    /* storage unavailable */
-  }
-}
-
-export function clearProfile() {
-  try {
-    localStorage.removeItem(PROFILE_KEY)
-  } catch {
-    /* storage unavailable */
-  }
-}
-
+/** Seeded data for the local, in-memory demo ("Explore the demo instead"). */
 export function seed(n0: string, n1: string): AppData {
   const N0 = n0 || 'Star'
   const N1 = n1 || 'Niki'

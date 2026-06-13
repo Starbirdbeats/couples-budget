@@ -128,18 +128,23 @@ export async function insertTransaction(input: {
   memberId: string | null
   scope: Scope
   notes: string
-}): Promise<void> {
-  const { error } = await supabase.from('transactions').insert({
-    household_id: input.householdId,
-    type: input.type,
-    amount: input.amount,
-    occurred_at: iso(input.dateMs),
-    category_id: input.categoryId,
-    member_id: input.memberId,
-    scope: input.scope,
-    notes: input.notes,
-  })
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      household_id: input.householdId,
+      type: input.type,
+      amount: input.amount,
+      occurred_at: iso(input.dateMs),
+      category_id: input.categoryId,
+      member_id: input.memberId,
+      scope: input.scope,
+      notes: input.notes,
+    })
+    .select('id')
+    .single()
   if (error) throw error
+  return data.id as string
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
@@ -159,9 +164,14 @@ export async function deleteBudget(householdId: string, categoryId: string): Pro
   if (error) throw error
 }
 
-export async function insertCategory(householdId: string, name: string): Promise<void> {
-  const { error } = await supabase.from('categories').insert({ household_id: householdId, name, type: 'expense' })
+export async function insertCategory(householdId: string, name: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({ household_id: householdId, name, type: 'expense' })
+    .select('id')
+    .single()
   if (error) throw error
+  return data.id as string
 }
 
 export async function insertContribution(input: {
@@ -170,13 +180,18 @@ export async function insertContribution(input: {
   memberId: string | null
   amount: number
   dateMs: number
-}): Promise<void> {
-  const { error } = await supabase.from('contributions').insert({
-    household_id: input.householdId,
-    fund_id: input.fundId,
-    member_id: input.memberId,
-    amount: input.amount,
-    occurred_at: iso(input.dateMs),
-  })
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from('contributions')
+    .insert({
+      household_id: input.householdId,
+      fund_id: input.fundId,
+      member_id: input.memberId,
+      amount: input.amount,
+      occurred_at: iso(input.dateMs),
+    })
+    .select('id')
+    .single()
   if (error) throw error
+  return data.id as string
 }

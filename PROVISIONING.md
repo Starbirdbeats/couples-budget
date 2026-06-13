@@ -18,19 +18,19 @@ This records what's set up and how to maintain it.
   client bundle; RLS is the boundary). In `.env` locally and as GitHub Actions **repository variables**
   for the Pages build.
 
-## Cleanup / maintenance to do
+## Notes / maintenance
 
-1. **Revoke the provisioning token.** A Supabase personal access token named `couples-budget-provision`
-   was created to apply the schema via the Management API. Delete it at
-   https://supabase.com/dashboard/account/tokens once you're happy everything works.
-2. **Consent-screen branding (cosmetic).** The OAuth client lives in the *OpenClaw Calendar* Google Cloud
-   project, so Google's sign-in screen shows "OpenClaw Calendar". For v1 only you sign in, so this is
-   harmless. To fix: create a dedicated Google Cloud project for Couples Budget, configure its OAuth
-   consent screen, make a new Web client there, and swap the client ID/secret into the Supabase Google
-   provider. (A first attempt at a dedicated project stalled on IAM propagation — retrying later should work.)
+1. **Provisioning token** — a temporary Supabase access token (`couples-budget-provision`) was used to apply
+   the schema via the Management API and was **deleted** afterward. Nothing in the app uses it (the client
+   uses the publishable anon key).
+2. **OAuth client home (cosmetic).** The Google OAuth client lives in the *OpenClaw Calendar* Google Cloud
+   project. Google's consent screen shows the Supabase domain (`…supabase.co`), so this is invisible to users
+   in practice. If you ever want a dedicated project anyway: create one, configure its consent screen, make a
+   new Web client (redirect URI = the Supabase callback), and swap the client ID/secret into the Supabase
+   Google provider. (A first attempt at a dedicated project stalled on IAM propagation — retry later.)
 3. **Test users.** OpenClaw's consent screen is in *Testing* mode; `marcellohaupt@gmail.com` is already a
-   test user. When the partner starts logging in (Scope B), add their email as a test user too, or publish
-   the dedicated app.
+   test user. When the partner starts logging in (Scope B), add their email as a test user too, or publish a
+   dedicated app.
 
 ## Local setup
 

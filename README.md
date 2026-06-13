@@ -14,11 +14,14 @@ Implemented from the Claude Design handoff bundle **Couples Budget v2** (Breakdo
 - **Funds** — savings goals with targets, contributions and withdrawals
 - **PWA** — installable, offline-capable (service worker precache + Google Fonts runtime cache)
 
-All data lives in `localStorage` — no backend, no real account. The OAuth flow is simulated by design; a real provider (Supabase/Firebase/Auth.js) can be dropped in behind the same screens.
+**Auth & data:** real Google sign-in via Supabase Auth; data lives in Postgres with row-level security,
+scoped to your household. Each signed-in user syncs across their own devices (single-user cloud sync —
+a shared-partner-login flow is the planned next step). "Explore the demo instead" runs a seeded,
+in-memory demo that never touches the cloud. See [PROVISIONING.md](PROVISIONING.md) for the backend setup.
 
 ## Stack
 
-Vite · React 19 · TypeScript · vite-plugin-pwa (Workbox)
+Vite · React 19 · TypeScript · vite-plugin-pwa (Workbox) · Supabase (Postgres + Auth + RLS)
 
 ## Development
 

@@ -6,6 +6,16 @@ A calm, minimal couples budgeting PWA. Vite + React 19 + TypeScript, `vite-plugi
 - **State:** see `src/state.tsx` (central provider). Data persistence in `src/store.ts`.
 - **Vite `base`** is `/couples-budget/` — keep asset paths relative.
 
+## Project docs (kept private)
+
+Design, QA and lifecycle docs are **not in this repo** — they live in the maintainer's private second-brain vault at `Projects/Couples Budget/docs/` (synced to Starbird & MSI). Read them there before working a task doc; they govern how work ships.
+
+**Lifecycle & gates** (summary — full rules in the vault's `docs/CLAUDE.md`):
+- Work docs live in `docs/TBD/`; they graduate (`git mv`) to `docs/Archived/` only when **every** task is done.
+- A task is done only at all four gates, in order: **Implemented → E2E-tested (agent) → Puppeteer-QA (agent) → Human-verified**.
+- QA pass bar is severity-weighted: **P0/P1 block, P2/P3 are non-blocking flags**; money-data bugs are auto-P0. The QA agent never self-approves Gate 4 and never auto-fixes — it reports.
+- On archive: update `docs/design/AS-BUILT.md` (timestamped changelog) and check it aligns with `docs/design/INTENDED-DESIGN.md`; flag drift for approval.
+
 ---
 
 # Engineering Guidelines (Karpathy)

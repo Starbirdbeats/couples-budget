@@ -1,4 +1,5 @@
 import { useApp } from '../state'
+import { INK, TEXT_SOFT } from '../theme'
 import type { Tab } from '../types'
 
 const LEFT: Array<{ id: Tab; label: string }> = [
@@ -16,9 +17,10 @@ function NavButton({ id, label }: { id: Tab; label: string }) {
   return (
     <button
       onClick={() => setTab(id)}
+      aria-current={active ? 'page' : undefined}
       style={{
         background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-        fontSize: 13, fontWeight: active ? 700 : 500, color: active ? '#211F2A' : '#A8A4B8',
+        fontSize: 13, fontWeight: active ? 700 : 500, color: active ? INK : TEXT_SOFT,
         padding: '12px 6px', minWidth: 60,
       }}
     >
@@ -28,10 +30,11 @@ function NavButton({ id, label }: { id: Tab; label: string }) {
 }
 
 export function TabBar() {
-  const { setTab } = useApp()
+  const { newEntry } = useApp()
   return (
-    <div
+    <nav
       className="tabbar"
+      aria-label="Primary"
       style={{
         position: 'absolute', left: 0, right: 0, bottom: 0, background: 'rgba(247,246,251,0.92)',
         backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderTop: '1px solid #E9E6F1',
@@ -41,8 +44,8 @@ export function TabBar() {
     >
       {LEFT.map((n) => <NavButton key={n.id} {...n} />)}
       <button
-        className="hov-dark"
-        onClick={() => setTab('add')}
+        className="hov-dark press"
+        onClick={newEntry}
         aria-label="New entry"
         style={{
           width: 52, height: 52, borderRadius: 26, border: 'none', background: '#211F2A',
@@ -53,6 +56,6 @@ export function TabBar() {
         +
       </button>
       {RIGHT.map((n) => <NavButton key={n.id} {...n} />)}
-    </div>
+    </nav>
   )
 }

@@ -45,7 +45,7 @@ export function Auth() {
       >
         Explore the demo instead
       </button>
-      <div style={{ fontSize: 11.5, color: '#B0ACBE', marginTop: 36, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11.5, color: '#6E6A7E', marginTop: 36, lineHeight: 1.5 }}>
         Sign in to sync across devices · the demo stays on this device.
       </div>
     </div>

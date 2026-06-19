@@ -1,33 +1,39 @@
 import { useApp } from '../state'
-import { GREEN, RED, card, chipStyle } from '../theme'
+import { GREEN, RED, TEXT_SOFT, card, catColor, chipStyle } from '../theme'
 import { dayLabel } from '../store'
 import { Avatar, Bar, SectionLabel } from '../components/ui'
 
-const FUND_COLORS = ['#6053CE', '#C0457E', '#2E7D5B']
-
 export function Funds() {
-  const { data, contrib, setContrib, contribute, members, person, fmt, num } = useApp()
+  const { data, contrib, setContrib, contribute, members, person, fmt, num, pending } = useApp()
 
   return (
     <div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-        {data.funds.map((f, i) => {
+        {data.funds.length === 0 && (
+          <div style={{ ...card, textAlign: 'center', padding: '36px 24px' }}>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>No funds yet</div>
+            <div style={{ fontSize: 13, color: TEXT_SOFT, marginTop: 6, lineHeight: 1.5 }}>
+              Savings goals you set up will show here.
+            </div>
+          </div>
+        )}
+        {data.funds.map((f) => {
           const pct = f.target > 0 ? Math.round(Math.min((f.balance / f.target) * 100, 100)) : 0
           return (
             <div key={f.id} style={{ ...card, padding: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 15, fontWeight: 600 }}>{f.name}</span>
-                <span style={{ fontSize: 13, color: '#8B86A0', fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
+                <span style={{ fontSize: 13, color: TEXT_SOFT, fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 8 }}>
                 <span style={{ fontSize: 23, fontWeight: 600, letterSpacing: -0.4, fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(f.balance, 0)}
                 </span>
-                <span style={{ fontSize: 13, color: '#B0ACBE', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 13, color: TEXT_SOFT, fontVariantNumeric: 'tabular-nums' }}>
                   / {fmt(f.target, 0)}
                 </span>
               </div>
-              <Bar pct={pct} color={FUND_COLORS[i % FUND_COLORS.length]} style={{ marginTop: 12 }} />
+              <Bar pct={pct} color={catColor(f.id)} style={{ marginTop: 12 }} />
             </div>
           )
         })}
@@ -57,6 +63,8 @@ export function Funds() {
             type="number"
             inputMode="decimal"
             placeholder="0.00"
+            aria-label="Contribution amount"
+            onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' })}
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '12px 14px', borderRadius: 13,
               border: '1px solid #E6E3EF', fontSize: 15, background: '#FAF9FD', outline: 'none',
@@ -99,17 +107,18 @@ export function Funds() {
             )
           })}
         </div>
-        <div style={{ fontSize: 12, color: '#B0ACBE', marginTop: 10 }}>Use a negative amount to withdraw.</div>
+        <div style={{ fontSize: 12, color: TEXT_SOFT, marginTop: 10 }}>Use a negative amount to withdraw.</div>
         <button
-          className="hov-dark"
+          className={pending.contrib ? undefined : 'hov-dark press'}
           onClick={contribute}
+          disabled={pending.contrib}
           style={{
             width: '100%', padding: '14px 0', borderRadius: 13, border: 'none', background: '#211F2A',
-            color: '#FFFFFF', fontSize: 14.5, fontWeight: 600, cursor: 'pointer', marginTop: 14,
-            fontFamily: 'inherit',
+            color: '#FFFFFF', fontSize: 14.5, fontWeight: 600, marginTop: 14, fontFamily: 'inherit',
+            cursor: pending.contrib ? 'default' : 'pointer', opacity: pending.contrib ? 0.55 : 1,
           }}
         >
-          Save contribution
+          {pending.contrib ? 'Saving…' : 'Save contribution'}
         </button>
       </div>
 
@@ -131,7 +140,7 @@ export function Funds() {
                   <Avatar initial={c.member[0]} bg={p.bg} fg={p.fg} size={30} style={{ fontSize: 12 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{fd ? fd.name : '—'}</div>
-                    <div style={{ fontSize: 12, color: '#8B86A0' }}>{c.member} · {dayLabel(c.date)}</div>
+                    <div style={{ fontSize: 12, color: TEXT_SOFT }}>{c.member} · {dayLabel(c.date)}</div>
                   </div>
                   <span
                     style={{

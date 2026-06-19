@@ -147,6 +147,30 @@ export async function insertTransaction(input: {
   return data.id as string
 }
 
+export async function updateTransaction(id: string, fields: {
+  type: TxnType
+  amount: number
+  dateMs: number
+  categoryId: string
+  memberId: string | null
+  scope: Scope
+  notes: string
+}): Promise<void> {
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      type: fields.type,
+      amount: fields.amount,
+      occurred_at: iso(fields.dateMs),
+      category_id: fields.categoryId,
+      member_id: fields.memberId,
+      scope: fields.scope,
+      notes: fields.notes,
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
 export async function deleteTransaction(id: string): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id)
   if (error) throw error
@@ -194,4 +218,38 @@ export async function insertContribution(input: {
     .single()
   if (error) throw error
   return data.id as string
+}
+
+/** Permanently delete every household the signed-in user owns (cascades). */
+export async function deleteMyHousehold(): Promise<void> {
+  const { error } = await supabase.rpc('delete_my_household')
+  if (error) throw error
+}
+
+/**
+ * Subscribe to any change in this household's data. Fires `onChange` (debounced
+ * by the caller) so the app can refetch the bundle — keeps a second device live.
+ * Returns an unsubscribe function.
+ */
+export function subscribeHousehold(householdId: string, onChange: () => void): () => void {
+  const tables = [
+    'household_members', 'categories',
+    'transactions', 'budgets', 'funds', 'contributions',
+  ]
+  const channel = supabase.channel(`household:${householdId}`)
+  for (const table of tables) {
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table, filter: `household_id=eq.${householdId}` },
+      onChange,
+    )
+  }
+  // `households` is keyed by `id`, not `household_id` — add a matching listener.
+  channel.on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'households', filter: `id=eq.${householdId}` },
+    onChange,
+  )
+  channel.subscribe()
+  return () => { void supabase.removeChannel(channel) }
 }

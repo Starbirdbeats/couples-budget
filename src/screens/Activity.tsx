@@ -1,11 +1,11 @@
 import { useApp } from '../state'
-import { GREEN, INK, card, chipStyle } from '../theme'
+import { GREEN, ICON_MUTED, INK, TEXT_SOFT, TRACK, card, chipStyle } from '../theme'
 import { dayLabel } from '../store'
 import { Avatar, SectionLabel } from '../components/ui'
 import type { Txn } from '../types'
 
 export function Activity() {
-  const { data, members, filter, setFilter, fmt, person, deleteTxn } = useApp()
+  const { data, members, filter, setFilter, fmt, person, deleteTxn, startEdit } = useApp()
 
   const catName = (cid: string) => data.cats.find((x) => x.id === cid)?.name ?? '—'
   const sorted = [...data.txns].sort((a, b) => b.date - a.date)
@@ -62,28 +62,55 @@ export function Activity() {
                     borderTop: `1px solid ${i > 0 ? '#F0EEF6' : 'transparent'}`,
                   }}
                 >
-                  <Avatar initial={t.member[0]} bg={p.bg} fg={p.fg} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 600 }}>{catName(t.catId)}</div>
-                    <div style={{ fontSize: 12, color: '#8B86A0', marginTop: 1 }}>
-                      {[t.member, t.scope, t.notes].filter(Boolean).join(' · ')}
-                    </div>
-                  </div>
-                  <span
+                  <button
+                    onClick={() => startEdit(t.id)}
+                    aria-label={`Edit ${catName(t.catId)} entry`}
                     style={{
-                      fontSize: 14.5, fontWeight: 600, fontVariantNumeric: 'tabular-nums',
-                      color: isInc ? GREEN : INK,
+                      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12,
+                      background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer',
+                      fontFamily: 'inherit', color: 'inherit', textAlign: 'left',
                     }}
                   >
-                    {(isInc ? '+' : '−') + fmt(t.amount)}
-                  </span>
+                    <Avatar initial={t.member[0]} bg={p.bg} fg={p.fg} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ fontSize: 14.5, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {catName(t.catId)}
+                        </span>
+                        {t.scope === 'personal' && (
+                          <span
+                            style={{
+                              flexShrink: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.3,
+                              color: TEXT_SOFT, background: TRACK, borderRadius: 6, padding: '2px 6px',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            Personal
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12, color: TEXT_SOFT, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {[t.member, t.notes].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        flexShrink: 0, fontSize: 14.5, fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+                        color: isInc ? GREEN : INK,
+                      }}
+                    >
+                      {(isInc ? '+' : '−') + fmt(t.amount)}
+                    </span>
+                  </button>
                   <button
                     className="hov-red"
                     onClick={() => deleteTxn(t.id)}
-                    aria-label="Delete entry"
+                    aria-label={`Delete ${catName(t.catId)} entry`}
                     style={{
-                      background: 'none', border: 'none', color: '#C9C5D6', fontSize: 19,
-                      cursor: 'pointer', padding: '4px 2px', lineHeight: 1, fontFamily: 'inherit',
+                      flexShrink: 0, width: 44, height: 44, marginRight: -10,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'none', border: 'none', color: ICON_MUTED, fontSize: 19,
+                      cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit',
                     }}
                   >
                     ×
@@ -95,7 +122,7 @@ export function Activity() {
         </div>
       ))}
       {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', color: '#B0ACBE', fontSize: 14, padding: '48px 0' }}>
+        <div style={{ textAlign: 'center', color: TEXT_SOFT, fontSize: 14, padding: '48px 0' }}>
           Nothing here yet — add an entry with the + button.
         </div>
       )}

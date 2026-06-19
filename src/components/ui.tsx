@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import type { CSSProperties, ReactNode } from 'react'
-import { TRACK } from '../theme'
+import { TEXT_SOFT, TRACK } from '../theme'
 
 export function Avatar({
   initial, bg, fg, size = 34, style,
@@ -22,38 +22,6 @@ export function Avatar({
     >
       {initial}
     </div>
-  )
-}
-
-export function Chip({
-  label, active, border, bg, fg, onClick, children,
-}: {
-  label?: string
-  active?: boolean
-  border: string
-  bg: string
-  fg: string
-  onClick: () => void
-  children?: ReactNode
-}) {
-  void active
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: children ? undefined : '10px 16px',
-        borderRadius: 18,
-        border: `1px solid ${border}`,
-        background: bg,
-        color: fg,
-        fontSize: 13.5,
-        fontWeight: 600,
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-      }}
-    >
-      {children ?? label}
-    </button>
   )
 }
 
@@ -88,20 +56,20 @@ export function Bar({
 
 export function SectionLabel({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return (
-    <div
+    <h2
       style={{
-        fontSize: 12, fontWeight: 600, letterSpacing: 1.2, color: '#8B86A0',
+        fontSize: 12, fontWeight: 600, letterSpacing: 1.2, color: TEXT_SOFT,
         textTransform: 'uppercase', margin: '22px 2px 10px', ...style,
       }}
     >
       {children}
-    </div>
+    </h2>
   )
 }
 
 export function FieldLabel({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return (
-    <div style={{ fontSize: 13, fontWeight: 600, color: '#6E6A7E', margin: '18px 2px 8px', ...style }}>
+    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_SOFT, margin: '18px 2px 8px', ...style }}>
       {children}
     </div>
   )
@@ -121,20 +89,24 @@ export const inputStyle: CSSProperties = {
 }
 
 export function PrimaryButton({
-  children, onClick, style,
+  children, onClick, style, disabled,
 }: {
   children: ReactNode
   onClick: () => void
   style?: CSSProperties
+  disabled?: boolean
 }) {
   return (
     <button
-      className="hov-dark"
+      className={disabled ? undefined : 'hov-dark press'}
       onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
       style={{
         width: '100%', padding: '16px 0', borderRadius: 15, border: 'none',
         background: '#211F2A', color: '#FFFFFF', fontSize: 15.5, fontWeight: 600,
-        cursor: 'pointer', fontFamily: 'inherit', ...style,
+        cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.55 : 1,
+        fontFamily: 'inherit', ...style,
       }}
     >
       {children}

@@ -10,7 +10,7 @@ body {
 }
 
 input::placeholder {
-  color: #B6B2C2;
+  color: #7C7889;
 }
 
 input[type='number']::-webkit-outer-spin-button,
@@ -29,6 +29,11 @@ input[type='number'] {
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Stage: centers the phone shell on desktop, full-bleed on mobile */
 .stage {
   min-height: 100vh;
@@ -44,6 +49,8 @@ input[type='number'] {
 .shell {
   width: 400px;
   height: 824px;
+  /* Never taller than the viewport allows once the stage padding is removed. */
+  height: min(824px, calc(100dvh - 108px));
   background: #F7F6FB;
   border-radius: 28px;
   box-shadow: 0 24px 60px rgba(33,31,42,0.14), 0 2px 8px rgba(33,31,42,0.06);
@@ -52,7 +59,9 @@ input[type='number'] {
   flex-shrink: 0;
 }
 
-@media (max-width: 520px) {
+/* Full-bleed on narrow screens, in landscape, and on short viewports (where the
+   framed shell would otherwise overflow or the keyboard would cover inputs). */
+@media (max-width: 520px), (max-height: 600px), (orientation: landscape) {
   .stage { padding: 0; align-items: stretch; }
   .shell {
     width: 100%;
@@ -73,6 +82,20 @@ input[type='number'] {
 /* Focus states (mirroring style-focus) */
 .foc-accent:focus { border-color: #6053CE !important; outline: none; }
 
+/* Motion layer — calm, short, and disabled under reduced-motion. */
+.press { transition: transform 0.08s ease; }
+.press:active { transform: scale(0.97); }
+.screen-fade { animation: fadeIn 0.22s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .press:active { transform: none; }
+}
+
 .tab-content {
   position: absolute;
   inset: 0;
@@ -83,5 +106,5 @@ input[type='number'] {
 
 /* Respect notch / home-indicator areas when installed */
 @supports (padding: env(safe-area-inset-bottom)) {
-  .tabbar { padding-bottom: calc(22px + env(safe-area-inset-bottom) * 0.6) !important; }
+  .tabbar { padding-bottom: calc(22px + env(safe-area-inset-bottom)) !important; }
 }

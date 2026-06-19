@@ -100,7 +100,9 @@ input[type='number'] {
   position: absolute;
   inset: 0;
   overflow-y: auto;
-  padding: 0 20px 120px;
+  /* Bottom padding clears both the tab bar (~96px) and the +FAB that overhangs
+     it (~26px), so a full-width primary CTA never sits under the FAB. */
+  padding: 0 20px 148px;
   box-sizing: border-box;
 }
 

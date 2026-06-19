@@ -1,5 +1,5 @@
 import { useApp } from '../state'
-import { AMBER, RED, TEXT_SOFT, card } from '../theme'
+import { AMBER_TEXT, RED, TEXT_SOFT, card } from '../theme'
 import { budgetRow, monthStats } from '../derive'
 import { Bar } from '../components/ui'
 
@@ -50,7 +50,7 @@ export function Budgets() {
                       {fmt(r.spentAmount, 0)} of {fmt(r.target, 0)}
                     </span>
                     {r.status !== 'ok' && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: r.status === 'over' ? RED : AMBER, flexShrink: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: r.status === 'over' ? RED : AMBER_TEXT, flexShrink: 0 }}>
                         {r.status === 'over' ? 'Over budget' : 'Near limit'}
                       </span>
                     )}

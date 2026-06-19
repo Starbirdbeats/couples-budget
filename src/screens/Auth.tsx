@@ -3,7 +3,7 @@ import { useApp } from '../state'
 export function Auth() {
   const { startGoogle, continueAsGuest } = useApp()
   return (
-    <div
+    <main
       style={{
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: '0 36px 40px',
@@ -48,6 +48,6 @@ export function Auth() {
       <div style={{ fontSize: 11.5, color: '#6E6A7E', marginTop: 36, lineHeight: 1.5 }}>
         Sign in to sync across devices · the demo stays on this device.
       </div>
-    </div>
+    </main>
   )
 }

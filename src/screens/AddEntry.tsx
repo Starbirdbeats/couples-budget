@@ -34,7 +34,8 @@ export function AddEntry() {
               style={{
                 flex: 1, padding: '11px 0', borderRadius: 10, border: 'none',
                 background: active ? '#FFFFFF' : 'transparent',
-                color: active ? INK : TEXT_SOFT,
+                // Darker than TEXT_SOFT so it clears AA on the #E6E3EF track.
+                color: active ? INK : '#5E5A6B',
                 fontSize: 14.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                 boxShadow: active ? '0 1px 3px rgba(33,31,42,0.1)' : 'none',
               }}
@@ -131,6 +132,7 @@ export function AddEntry() {
             type="date"
             value={form.date}
             onChange={(e) => setForm({ date: e.target.value })}
+            aria-label="Date"
             style={inputStyle}
           />
         </div>

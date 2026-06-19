@@ -1,5 +1,5 @@
 import { useApp } from '../state'
-import { AMBER, RED, TEXT_SOFT, card, catColor } from '../theme'
+import { AMBER_TEXT, RED, TEXT_SOFT, card, catColor } from '../theme'
 import { budgetRow, monthStats } from '../derive'
 import { Avatar, Bar, SectionLabel } from '../components/ui'
 
@@ -82,7 +82,7 @@ export function Dashboard() {
                 <span style={{ width: 9, height: 9, borderRadius: 3, background: color, flexShrink: 0 }} />
                 <span style={{ fontSize: 15, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.c.name}</span>
                 {r.hasBudget && r.status !== 'ok' && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: r.status === 'over' ? RED : AMBER, flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: r.status === 'over' ? RED : AMBER_TEXT, flexShrink: 0 }}>
                     {r.status === 'over' ? 'Over' : 'Near limit'}
                   </span>
                 )}
